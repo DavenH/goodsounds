@@ -41,7 +41,7 @@ JOIN takes t ON s.id = t.sound_id
         id, path = self.ids_and_paths[idx]
 
         # Fetch the sound metadata using the sound_id from your database
-        sound_data = self.cursor.execute("SELECT * FROM sounds WHERE id=?", (id, )).fetchone()
+        sound_data = self.cursor.execute("SELECT instrument, note, octave FROM sounds WHERE id=?", (id, )).fetchone()
 
         # Here you would add the logic to load the audio file. For example:
         full_path = os.path.join(self.root_path, path)
@@ -67,8 +67,9 @@ JOIN takes t ON s.id = t.sound_id
 
         # Return a dictionary of the data for this sound file
         return {
-            'audio': log_mel_spec,  # the processed audio signal
-            'metadata': sound_data  # the metadata associated with the sound
+            'spectrogram': log_mel_spec,
+            'audio': audio,
+            'label': sound_data
         }
 
 
@@ -81,7 +82,7 @@ dataloader = DataLoader(good_sounds_dataset, batch_size=4, shuffle=True)
 
 # Iterate over the dataset
 for i, data in enumerate(dataloader):
-    print(data['metadata'])
+    print(data['label'])
 
     if i > 10:
         break
