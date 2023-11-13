@@ -1,9 +1,11 @@
 import os
+import time
 
 import torch
 import torchaudio
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import sqlite3
+from alive_progress import alive_bar
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB, Resample
 
 def to_midi(note, octave):
@@ -20,7 +22,6 @@ def to_midi(note, octave):
 
 class GoodSoundsDataset(Dataset):
     def __init__(self, root_path: str, trunc_len: int, width: int, height: int):
-        # Connect to the SQLite database
         self.conn = sqlite3.connect(os.path.join(root_path, 'database.sqlite'))
         self.root_path = root_path
         self.cursor = self.conn.cursor()
@@ -28,20 +29,21 @@ class GoodSoundsDataset(Dataset):
 
         self.cursor.execute("SELECT DISTINCT instrument from sounds WHERE instrument != ''")
         self.categories = [inst[0] for inst in self.cursor.fetchall()]
-        self.map_to_index = dict([(self.categories[i], i) for i in range(len(self.categories))])
+        self.map_to_index = dict([(category, i) for (i, category) in enumerate(self.categories)])
 
-        query = """SELECT s.id, t.filename
+        self.data_cache = list()
+        query = """SELECT s.id, s.instrument, s.semitone, t.filename
 FROM sounds s
 JOIN takes t ON s.id = t.sound_id
 """
         self.cursor.execute(query)
         self.ids_and_paths = self.cursor.fetchall()
-        print(len(self.ids_and_paths))
+        print(f"Dataset size: {len(self.ids_and_paths)}")
+
         self.resamplers = dict()
         samp_rate = 16000
         for orig_freq in [44100, 48000]:
             self.resamplers[orig_freq] = Resample(orig_freq=orig_freq, new_freq=samp_rate)
-
 
         hop_length = trunc_len // width
 
@@ -49,53 +51,72 @@ JOIN takes t ON s.id = t.sound_id
             sample_rate=samp_rate,
             n_fft=height * 4,
             hop_length=hop_length,
-            n_mels=height
+            n_mels=height + 1 # plus 1 due to dc offset
         )
         self.amplitude_to_db_transform = AmplitudeToDB()
+
+        # 16308 items in the dataset; we can probably load it all into memory
+        # 128 * 256 * 4 = 2GB
+        # perhaps even video memory - we'd need to load it all upfront then transfer to cuda device
+        self.preload()
+
+    def preload(self):
+        print("Loading dataset into memory...")
+        start_time = time.time_ns()
+
+        with alive_bar(len(self.ids_and_paths), force_tty=True) as bar:
+            for idx, (id, instrument, note, path) in enumerate(self.ids_and_paths):
+                full_path = os.path.join(self.root_path, path)
+                audio, sr = torchaudio.load(full_path)
+
+                # Resample to 16kHz
+                audio = self.resamplers[int(sr)](audio)
+
+                # If the audio has more than one channel (is stereo), make it mono by selecting one channel
+                if audio.shape[0] > 1:
+                    audio = audio[0, :].unsqueeze(0)
+
+                # trim or pad to ~2 seconds
+                if audio.shape[1] < self.trunc_len:
+                    audio = torch.nn.functional.pad(audio, (0, self.trunc_len - audio.shape[1]))
+                else:
+                    # Truncate
+                    audio = audio[:, :self.trunc_len]
+
+                mel_spec = self.mel_spectrogram_transform(audio)
+
+                # skip the DC offset 'frequency' bin, it's all zero. Now we're width x height again
+                # also skip one of the time bins, I don't know why but there's one more than expected there
+                mel_spec = mel_spec[:,1:,1:]
+
+                # transform to decibels, and scale it back to [0-1]
+                log_mel_spec = (self.amplitude_to_db_transform(mel_spec) + 100) * 0.01
+
+                self.data_cache.append(
+                    {
+                        'spectrogram': log_mel_spec,
+                        'index': self.map_to_index[instrument],
+                        'metadata': {
+                            'path': path,
+                            'instrument': instrument,
+
+                            # we may want to predict this too
+                            'note': note
+                        }
+                    }
+                )
+
+                time.sleep(0.001)
+                bar()
+                # if idx % 1000 == 0:
+                #     print(f"Loaded {idx} of {len(self.ids_and_paths)} samples")
+            end_time = time.time_ns()
+        print(f"Done loading in {(end_time - start_time)/1e9:5.03f}s")
+
 
     def __len__(self):
         # Return the total number of sound samples
         return len(self.ids_and_paths)
 
     def __getitem__(self, idx):
-        id, path = self.ids_and_paths[idx]
-
-        # Fetch the sound metadata using the sound_id from your database
-        sound_data = self.cursor.execute("SELECT instrument, note, octave FROM sounds WHERE id=?", (id, )).fetchone()
-
-        full_path = os.path.join(self.root_path, path)
-        audio, sr = torchaudio.load(full_path)
-
-        # Resample to 16kHz
-        audio = self.resamplers[int(sr)](audio)
-
-        # If the audio has more than one channel (is stereo), make it mono by selecting one channel
-        if audio.shape[0] > 1:
-            audio = audio[0, :].unsqueeze(0)
-
-        # trim or pad to ~2 seconds
-        if audio.shape[1] < self.trunc_len:
-            audio = torch.nn.functional.pad(audio, (0, self.trunc_len - audio.shape[1]))
-        else:
-            # Truncate
-            audio = audio[:, :self.trunc_len]
-
-        mel_spec = self.mel_spectrogram_transform(audio)
-
-        # skip the DC offset, it's all zero. Now we're width x height again
-        mel_spec = mel_spec[:,:,1:]
-
-        log_mel_spec = (self.amplitude_to_db_transform(mel_spec) + 100) * 0.01
-
-        # Return a dictionary of the data for this sound file
-        return {
-            'spectrogram': log_mel_spec,
-            'audio': audio,
-            'index': self.map_to_index[sound_data[0]],
-            'metadata': {
-                'instrument': sound_data[0],
-                # we may want to predict this too
-                'note': to_midi(sound_data[1], sound_data[2])
-            }
-        }
-
+        return self.data_cache[idx]

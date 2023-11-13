@@ -33,6 +33,8 @@ class ConvNetModel(nn.Module):
         intermediate_size = 2 ** round(0.5 * (math.log2(final_size) + math.log2(n_categories)))
 
         self.fc1 = nn.Linear(final_size, intermediate_size)
+
+        # 1 more so we can predict the note
         self.fc2 = nn.Linear(intermediate_size, n_categories)
 
     def forward(self, x):
