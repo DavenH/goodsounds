@@ -88,15 +88,13 @@ for epoch in range(start_epoch, epochs):
             correct = (predicted == labels).sum().item()
             accum_accuracy += correct / labels.size(0)
 
-            # instrument_predictions = outputs[:,:,:len(dataset.categories)]
-            # note_predictions = outputs[:,:,len(dataset.categories):]
-
             loss = criterion(outputs, labels)
             accum_eval_loss += loss.item()
 
     avg_eval_loss = accum_eval_loss / len(eval_dl)
     avg_eval_acc = accum_accuracy / len(eval_dl)
     scheduler.step(avg_eval_loss)
+
     print(f"Eval loss: {avg_eval_loss:.6}, eval accuracy: {100*avg_eval_acc:3.2f}%")
 
     # checkpoint if it's an improvement
@@ -124,10 +122,7 @@ fig = make_subplots(
 )
 
 for i, sample in enumerate(random_samples):
-    data, true_label, note, path = (sample['spectrogram'],
-                                    sample['metadata']['instrument'],
-                                    sample['metadata']['note'],
-                                    sample['metadata']['path'])
+    data, true_label = (sample['spectrogram'], sample['metadata']['label'])
 
     # Generate prediction and calculate loss
     model.eval()
@@ -142,7 +137,7 @@ for i, sample in enumerate(random_samples):
     # Add subplot
     row, col = (i // 4) + 1, (i % 4) + 1
     fig.add_trace(go.Heatmap(z=data.cpu().squeeze(0).numpy(), colorscale='Viridis'), row=row, col=col)
-    fig.layout.annotations[i].update(text=f'Pred: {pred_label}, Label: {true_label}, Note: {note}')
+    fig.layout.annotations[i].update(text=f'Pred: {pred_label}, Label: {true_label}')
 
 fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=10)
