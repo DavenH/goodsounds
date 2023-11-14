@@ -57,8 +57,6 @@ class BaseAudioDataset(Dataset):
                 self.data_cache[i] = data
                 time.sleep(0.001)
                 bar()
-                if i % 1000 == 0:
-                    print(f"Loaded {i} of {len(self)} samples")
         end_time = time.time_ns()
         print(f"Done loading in {(end_time - start_time)/1e9:5.03f}s")
 
@@ -102,7 +100,7 @@ JOIN takes t ON s.id = t.sound_id
         if idx in self.data_cache:
             return self.data_cache[idx]
         else:
-            idx, (id, instrument, note, path) = self.ids_and_paths[idx]
+            id, instrument, note, path = self.ids_and_paths[idx]
             full_path = os.path.join(self.root_path, path)
             audio, sr = torchaudio.load(full_path)
             audio = self.preprocess_audio(audio, sr)
@@ -127,6 +125,9 @@ class FSDKaggle2019Dataset(BaseAudioDataset):
         self.annotations = pd.read_csv(csv_file)
         self.root_dir = root_dir
         self.label_map = {label: idx for idx, label in enumerate(self.annotations['labels'].unique())}
+
+        # maybe this should split the dataset into a few chunks to fit into memory.
+        self.preload()
 
     def __len__(self):
         return len(self.annotations)
