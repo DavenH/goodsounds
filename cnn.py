@@ -1,7 +1,7 @@
 import math
 
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as fn
 
 class ConvNetModel(nn.Module):
     def __init__(self, width: int, height: int, n_categories):
@@ -39,12 +39,12 @@ class ConvNetModel(nn.Module):
 
     def forward(self, x):
         x = self.bn1(self.conv1(x))
-        x = self.pool(F.relu(x))
+        x = self.pool(fn.relu(x))
         x = self.bn2(self.conv2(x))
         x = self.bn3(self.conv3(x))
-        x = self.pool(F.relu(x))
+        x = self.pool(fn.relu(x))
         x = x.view(x.shape[0], -1)
-        x = F.relu(self.fc1(x))
+        x = fn.relu(self.fc1(x))
         x = self.dropout(x)
         x = self.fc2(x)
         return x
