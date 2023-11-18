@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import time
+from typing import Union
 
 import pandas as pd
 import torch
@@ -41,17 +42,19 @@ class BaseAudioDataset(Dataset):
             trunc_len=trunc_len
         )
 
-    def preprocess_audio(self, audio, sr):
+    def preprocess_audio(self, audio, sr, offset=0):
         # Resample, convert to mono, trim or pad, and transform
         if sr != self.config["sample_rate"]:
             audio = self.resamplers[int(sr)](audio)
 
         if audio.shape[0] > 1:
             audio = audio[0, :].unsqueeze(0)
+
         if audio.shape[1] < self.trunc_len:
             audio = torch.nn.functional.pad(audio, (0, self.trunc_len - audio.shape[1]))
         else:
-            audio = audio[:, :self.trunc_len]
+            offset = min(offset, audio.shape[1] - self.trunc_len)
+            audio = audio[:, offset:offset + self.trunc_len]
         return audio
 
     def extract_features(self, audio):
@@ -60,11 +63,15 @@ class BaseAudioDataset(Dataset):
         return log_mel_spec[:,1:,1:]  # Adjusting dimensions as needed
 
     def preload(self):
-        print("Loading dataset into memory...")
-        start_time = time.time_ns()
+        self.preload_indices(range(len(self)))
 
-        with alive_bar(len(self), force_tty=True) as bar:
-            for i in range(len(self)):
+    def preload_indices(self, indices: [int]):
+        print(f"Loading {len(indices)} elements into memory...")
+
+        start_time = time.time_ns()
+        self.data_cache = dict()
+        with alive_bar(len(indices), force_tty=True) as bar:
+            for i in indices:
                 data = self.__getitem__(i)
                 self.data_cache[i] = data
                 time.sleep(0.001)
@@ -143,9 +150,10 @@ JOIN takes t ON s.id = t.sound_id
 
 
 class FSDKaggle2019(BaseAudioDataset):
-    def __init__(self, annotation_csv, wav_dir, sample_rate, trunc_len, width, height):
+    def __init__(self, annotation_csv, wav_dir, sample_rate, trunc_len, data_per_wav, width, height):
         super().__init__(sample_rate, trunc_len, width, height)
 
+        self.data_per_wav = data_per_wav
         self.wav_dir = wav_dir
         self.annotations = pd.read_csv(annotation_csv)
 
@@ -157,19 +165,20 @@ class FSDKaggle2019(BaseAudioDataset):
         self.label_map = {label: idx for idx, label in enumerate(self.categories)}
 
     def __len__(self):
-        # return 500
-        return len(self.annotations)
+        # return 100
+        return len(self.annotations) * self.data_per_wav
 
     def __getitem__(self, idx):
         if idx in self.data_cache:
             return self.data_cache[idx]
         else:
-            audio_file = os.path.join(self.wav_dir, self.annotations.iloc[idx, 0])
+            audio_file = os.path.join(self.wav_dir, self.annotations.iloc[idx // self.data_per_wav, 0])
             waveform, sample_rate = torchaudio.load(audio_file)
-            waveform = self.preprocess_audio(waveform, sample_rate)
+            offset = round((idx % self.data_per_wav) / self.data_per_wav * waveform.shape[1])
+            waveform = self.preprocess_audio(waveform, sample_rate, offset)
             mel_spec = self.extract_features(waveform)
 
-            label = self.annotations.iloc[idx, 1]
+            label = self.annotations.iloc[idx // self.data_per_wav, 1]
             labels = label.split(',')
             label_indices = [self.label_map[label] for label in labels]
             binary_labels = torch.zeros(len(self.label_map))

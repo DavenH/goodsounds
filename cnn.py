@@ -39,6 +39,9 @@ class ConvNetModel(nn.Module):
                 )
             self.conv.append(conv_config)
 
+            # necessary for the module.parameters() call to propagate to child modules
+            # these aren't directly set by self.conv = nn.Conv2d (in that case the link would be
+            # automatically made) by the base class's overloaded __attr__() method
             modules[f"conv{idx}"] = conv_config["conv"]
             modules[f"bn{idx}"] = conv_config["batch_norm"]
             in_channels = n_maps
