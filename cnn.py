@@ -10,7 +10,7 @@ class ConvNetModel(nn.Module):
 
         pool_w = 2
         pool_h = 2
-        dropout_rate = 0.2
+        dropout_rate = 0.1
 
         self.conv = []
         in_channels = 1
@@ -19,10 +19,12 @@ class ConvNetModel(nn.Module):
         n_total_param = 0
 
         conv_layers = [
-            dict(maps=16, kernel_size=5, stride=4, pool=False),
-            dict(maps=64, kernel_size=5, stride=2, pool=True),
+            dict(maps=16, kernel_size=7, stride=4, pool=False),
+            dict(maps=64, kernel_size=3, stride=2, pool=True),
             dict(maps=128, kernel_size=3, stride=2, pool=False),
-            dict(maps=512, kernel_size=3, stride=1, pool=True)
+            dict(maps=512, kernel_size=3, stride=1, pool=True),
+            dict(maps=1024, kernel_size=3, stride=1, pool=False),
+            dict(maps=1024, kernel_size=3, stride=1, pool=True)
         ]
 
         print(f"Shape:\t\t\t1 x {w} x {h},\t{w * h}")
@@ -66,7 +68,7 @@ class ConvNetModel(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
 
         # average between to the sizes in log-space
-        intermediate_size = 256 # 2 ** round(0.5 * (math.log2(final_size) + math.log2(n_categories)))
+        intermediate_size = 80 # 2 ** round(0.5 * (math.log2(final_size) + math.log2(n_categories)))
 
         self.fc1 = nn.Linear(final_size, intermediate_size)
         self.fc2 = nn.Linear(intermediate_size, n_categories)
@@ -76,7 +78,7 @@ class ConvNetModel(nn.Module):
 
         print(f"After linear 2:\t{intermediate_size} x {n_categories}\t{intermediate_size * n_categories}")
 
-        n_total_param += intermediate_size * n_categories
+        n_total_param += final_size * n_categories
         print(f"Total Parameters:\t{n_total_param}")
 
         self.config = dict(
@@ -87,8 +89,7 @@ class ConvNetModel(nn.Module):
             pool_w=pool_w,
             pool_h=pool_h,
             fc1_in=final_size,
-            fc1_out=intermediate_size,
-            fc2_out=n_categories
+            fc1_out=n_categories
         )
 
         # quick test to be sure it all works before waiting for dataset load

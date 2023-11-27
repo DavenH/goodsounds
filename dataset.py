@@ -1,21 +1,22 @@
 import os
 import sqlite3
 import time
-from typing import Union
+from typing import List
 
 import pandas as pd
 import torch
 import torch.nn as nn
 import torchaudio
-from alive_progress import alive_bar
 from torch.utils.data import Dataset
 from torchaudio.transforms import Resample, MelSpectrogram, AmplitudeToDB
+
+from events import load_progress_event, load_start_event, load_end_event
 
 
 class BaseAudioDataset(Dataset):
     def __init__(self, sample_rate, trunc_len, width, height):
         self.trunc_len = trunc_len
-        n_fft=height * 4
+        n_fft=height * 6
 
         self.resamplers = {
             32000: Resample(orig_freq=32000, new_freq=sample_rate),
@@ -62,23 +63,37 @@ class BaseAudioDataset(Dataset):
         log_mel_spec = (self.amplitude_to_db_transform(mel_spec) + 100) * 0.01
         return log_mel_spec[:,1:,1:]  # Adjusting dimensions as needed
 
-    def preload(self):
-        self.preload_indices(range(len(self)))
+    def preload(self, state: dict):
+        yield from self.preload_indices(range(len(self)), state)
 
-    def preload_indices(self, indices: [int]):
-        print(f"Loading {len(indices)} elements into memory...")
+    def preload_indices(self, indices: [int], state: dict):
+        size = len(indices)
+        print(f"Loading {size} elements into memory...")
+        yield load_start_event(size)
 
         start_time = time.time_ns()
         self.data_cache = dict()
-        with alive_bar(len(indices), force_tty=True) as bar:
-            for i in indices:
-                data = self.__getitem__(i)
-                self.data_cache[i] = data
-                time.sleep(0.001)
-                bar()
+        # with alive_bar(size, force_tty=True) as bar:
+        count = 0
+        for i in indices:
+            if state["paused"]:
+                break
+            data = self.__getitem__(i)
+            self.data_cache[i] = data
+            time.sleep(0.001)
+            yield load_progress_event(count, size)
+            count += 1
+            # bar()
 
         end_time = time.time_ns()
-        print(f"Done loading in {(end_time - start_time)/1e9:5.03f}s")
+        elapsed = (end_time - start_time)/1e9
+        yield load_end_event(size, elapsed)
+
+        print(f"Done loading in {elapsed:5.03f}s")
+
+    def get_config(self):
+        self.config["size"] = self.__len__()
+        return self.config
 
     def __len__(self):
         raise NotImplementedError
@@ -89,9 +104,8 @@ class BaseAudioDataset(Dataset):
     def get_loss_function(self):
         raise NotImplementedError
 
-    def get_config(self):
-        self.config["size"] = self.__len__()
-        return self.config
+    def get_categories(self) -> List[str]:
+        raise NotImplementedError
 
 
 class GoodSounds(BaseAudioDataset):
@@ -147,6 +161,8 @@ JOIN takes t ON s.id = t.sound_id
     def get_loss_function(self):
         return nn.CrossEntropyLoss()
 
+    def get_categories(self) -> List[str]:
+        return self.categories
 
 
 class FSDKaggle2019(BaseAudioDataset):
@@ -165,7 +181,7 @@ class FSDKaggle2019(BaseAudioDataset):
         self.label_map = {label: idx for idx, label in enumerate(self.categories)}
 
     def __len__(self):
-        # return 100
+        # return 1000
         return len(self.annotations) * self.data_per_wav
 
     def __getitem__(self, idx):
@@ -207,3 +223,6 @@ class FSDKaggle2019(BaseAudioDataset):
         # Calculate accuracy
         accuracy = correct.sum().float() / target.size(0)
         return accuracy
+
+    def get_categories(self) -> List[str]:
+        return self.categories

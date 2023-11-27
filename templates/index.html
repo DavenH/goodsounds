@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Dashboard</title>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}"/>
+</head>
+<body>
+<div class="dashboard">
+    <div class="left-panel">
+        <p id="trainStatus"></p>
+        <p id="evalStatus"></p>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="trainingProgress">0%</div>
+        </div>
+        <p id="trainingProgressInfo"></p>
+
+        <!-- Controls Section -->
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="loadProgress">0%</div>
+        </div>
+        <p id="loadProgressInfo"></p>
+
+        <div class="buttons">
+            <button id="saveButton" onclick="saveCheckpoint()">Save Model</button>
+            <button id="loadButton" onclick="loadCheckpoint()">Load Model</button>
+            <button id="trainButton" onclick="startTraining()">Train</button>
+            <button id="pauseButton" onclick="pauseTraining()">Pause</button>
+        </div>
+
+        <div id="modelDetails"></div>
+        <div id="architecture"></div>
+        <div class="dropdowns">
+            <select id="modelConfigDropdown" onchange="modelConfigSelected(this)">
+                <!-- Model configuration folders will be populated here -->
+            </select>
+
+            <select id="checkpointDropdown">
+                <!-- Checkpoints will be populated here based on the selected model configuration -->
+            </select>
+        </div>
+    </div>
+    <div class="right-panel">
+        <div class="graph-container">
+            <div id="lossGraph"></div>
+        </div>
+        <div class="graph-container">
+            <div id="evalGraph"></div>
+        </div>
+        <div id="controls-container">
+            <div class="buttons">
+                <button id="prevButton" class="button-icon" onclick="evaluatePrev()"></button>
+                <button id="nextButton" class="button-icon" onclick="evaluateNext()"></button>
+                <button id="refreshButton" class="button-icon" onclick="evaluateSame()"></button>
+                <button id="randButton" class="button-icon" onclick="evaluateRandom()"></button>
+            </div>
+            <audio id="audioPlayer" controls>
+                <source src="initial_audio.wav" type="audio/wav">
+                Your browser does not support the audio element.
+            </audio>
+
+        </div>
+
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</body>
+</html>
