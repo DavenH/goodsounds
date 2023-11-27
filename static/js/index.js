@@ -70,7 +70,6 @@ var loadEndListener = function(event) {
     document.getElementById("loadProgress").innerHTML = "Finished";
 };
 
-// Function to call when a model configuration is selected
 function modelConfigSelected(selectObject) {
     var folder = selectObject.value;
     refreshConfigSelection(folder);
@@ -81,11 +80,10 @@ function refreshConfigSelection(folder) {
         .then(response => response.json())
         .then(data => {
             if (data.config && data.checkpoints) {
-                // Populate the model details card
                 populateModelDetailsCard(data.config);
-                // Populate the checkpoint dropdown
+
                 var checkpointDropdown = document.getElementById('checkpointDropdown');
-                checkpointDropdown.innerHTML = ''; // Clear existing options
+                checkpointDropdown.innerHTML = '';
                 data.checkpoints.forEach(checkpoint => {
                     var option = document.createElement('option');
                     option.value = checkpoint;
@@ -99,10 +97,8 @@ function refreshConfigSelection(folder) {
 
 // Function to populate the model details card with config data
 function populateModelDetailsCard(config) {
-    // Get the container where the details will be placed
     var modelDetailsContainer = document.getElementById('modelDetails');
 
-    // Clear any previous content
     modelDetailsContainer.innerHTML = '';
 
     // Start with common model details
@@ -111,13 +107,15 @@ function populateModelDetailsCard(config) {
             <h3>Model</h3>
             <div class="label">Width</div><div class="value">${config.model.width}</div>
             <div class="label">Height</div><div class="value">${config.model.height}</div>
-
+        </div>
+        <div class="card-content">
             <h3>Dataset</h3>
             <div class="label">Sample Rate</div><div class="value">${config.dataset.sample_rate}</div>
             <div class="label">Trunc len</div><div class="value">${config.dataset.trunc_len}</div>
             <div class="label"># FFT</div><div class="value">${config.dataset.n_fft}</div>
             <div class="label"># Samples</div><div class="value">${config.dataset.size}</div>
-
+        </div>
+        <div class="card-content">
             <h3>Training</h3>
             <div class="label">Dropout</div><div class="value">${config.model.dropout}</div>
             <div class="label">Batch Size</div><div class="value">${config.batch_size}</div>
@@ -125,10 +123,12 @@ function populateModelDetailsCard(config) {
     `;
     modelDetailsContainer.innerHTML += commonDetailsHtml;
 
+    var architectureContainer = document.getElementById('architecture');
+
     // Now create the table for conv layer details
     var tableHtml = `
-        <div class="card-content">
-            <h3>Convolutional Layers</h3>
+        <div>
+            <h3>Conv Layers</h3>
             <table class="conv-layers-table">
                 <thead>
                     <tr>
@@ -156,8 +156,7 @@ function populateModelDetailsCard(config) {
 
     tableHtml += `</tbody></table></div>`;
 
-    // Append the table to the container
-    modelDetailsContainer.innerHTML += tableHtml;
+    architectureContainer.innerHTML = tableHtml;
 }
 
 
@@ -205,6 +204,7 @@ function initialize() {
         name: 'Eval Loss'
     }];
 
+    populateModelConfigDropdown();
     Plotly.newPlot('lossGraph', initialData, layout);
 
     if (typeof(EventSource) !== "undefined") {
@@ -312,7 +312,6 @@ function saveCheckpoint(filename) {
         }
     });
 }
-
 
 window.onload = function() {
     initialize();

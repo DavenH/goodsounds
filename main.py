@@ -102,6 +102,7 @@ def train():
 
     return Response(stream_with_context(train_generator()), mimetype='text/event-stream')
 
+
 @app.route('/train/pause', methods=['POST'])
 def pause_training():
     state["paused"] = True
@@ -122,6 +123,7 @@ def list_checkpoints():
 
     return jsonify(f)
 
+
 @app.route('/checkpoints', methods=['POST'])
 def save_checkpoints():
     """
@@ -130,6 +132,7 @@ def save_checkpoints():
     checkpoint_dir = "checkpoints/FSDKaggle2019"
     # trainer.save_checkpoint()
     return Response()
+
 
 @app.route('/checkpoints/load/<checkpoint>', methods=['POST'])
 def load_checkpoint(checkpoint):
@@ -172,8 +175,9 @@ def list_model_config_folders():
     for (dirpath, dirnames, filenames) in os.walk(checkpoint_dir):
         f.extend(dirnames)
         break
-
+    f.sort()
     return jsonify(f)
+
 
 @app.route('/evaluate_sample/<index>', methods=['POST'])
 def evaluate_sample(index):
@@ -183,18 +187,9 @@ def evaluate_sample(index):
         return jsonify({'figure': '', 'audio': ''})
     else:
         fig, audio_path = create_predictions_figure(state, int(index), device)
-
-        # Convert the figure to JSON
         graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-        # Return the JSON and the path to the audio file
         return jsonify({'figure': graph_json, 'audio': audio_path})
-
-# @app.route('/update_loss_graph', methods=['POST'])
-# def update_loss_graph():
-#     fig = create_loss_figure(state)
-#     graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-#     return jsonify({'figure': graph_json})
 
 
 @app.route('/audio/<path:filename>')

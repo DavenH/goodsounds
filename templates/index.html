@@ -13,16 +13,16 @@
     <div class="left-panel">
         <p id="trainStatus"></p>
         <p id="evalStatus"></p>
+        <p id="trainingProgressInfo"></p>
         <div class="progress-bar-container">
             <div class="progress-bar" id="trainingProgress">0%</div>
         </div>
-        <p id="trainingProgressInfo"></p>
 
         <!-- Controls Section -->
+        <p id="loadProgressInfo"></p>
         <div class="progress-bar-container">
             <div class="progress-bar" id="loadProgress">0%</div>
         </div>
-        <p id="loadProgressInfo"></p>
 
         <div class="buttons">
             <button id="saveButton" onclick="saveCheckpoint()">Save Model</button>
@@ -30,9 +30,6 @@
             <button id="trainButton" onclick="startTraining()">Train</button>
             <button id="pauseButton" onclick="pauseTraining()">Pause</button>
         </div>
-
-        <div id="modelDetails"></div>
-        <div id="architecture"></div>
         <div class="dropdowns">
             <select id="modelConfigDropdown" onchange="modelConfigSelected(this)">
                 <!-- Model configuration folders will be populated here -->
@@ -41,6 +38,12 @@
             <select id="checkpointDropdown">
                 <!-- Checkpoints will be populated here based on the selected model configuration -->
             </select>
+        </div>
+        <div class="card">
+            <div id="modelDetails"></div>
+        </div>
+        <div class="card">
+            <div id="architecture"></div>
         </div>
     </div>
     <div class="right-panel">

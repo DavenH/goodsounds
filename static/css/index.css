@@ -12,6 +12,7 @@ body {
 
 .buttons {
   margin-top: 10px;
+  margin-bottom: 20px;
 }
 
 button {
@@ -146,7 +147,6 @@ button:hover {
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   width: 100%;
-  max-width: 600px;
   margin: 20px auto;
   padding: 20px;
   box-sizing: border-box;
@@ -156,9 +156,8 @@ button:hover {
 
 .card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: right;
+  margin-bottom: 10px;
 }
 
 .card-header h2 {
@@ -179,16 +178,16 @@ button:hover {
   grid-template-columns: repeat(2, 1fr);
   column-gap: 10px;
   row-gap: 10px;
-  max-width: 50%;
+  flex-grow: 1;
+  min-width: 200px;
 }
 
-.card-content:after {
-  content: '';
-  grid-column: 1 / -1;
+#modelDetails {
+    display: flex;
 }
 
 .label {
-  color: #aaa; /* Change to light color for dark theme */
+  color: #aaa;
   grid-column: 1 / 2;
   font-weight: bold;
   text-align: right;
@@ -196,13 +195,12 @@ button:hover {
 
 .value {
   text-align: left;
-  grid-column: 2 / 3;
 }
 
 .conv-layers-table {
     width: 100%; /* Adjust as necessary */
-    border-collapse: collapse; /* Makes the table borders collapse into a single border */
-    margin-top: 10px; /* Space above the table */
+    border-collapse: collapse;
+    margin-top: 10px;
 }
 
 .conv-layers-table th, .conv-layers-table td {
