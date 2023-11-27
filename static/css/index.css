@@ -1,0 +1,245 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #333; /* Dark background */
+    color: #aaa; /* dark text */
+}
+
+.buttons {
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #48a; /* Green background */
+    color: #111; /* White text */
+    border: none;
+    border-radius: 5px; /* Rounded corners */
+    transition: background-color 0.1s; /* Transition for hover effect */
+}
+
+button:hover {
+    background-color: #59b; /* Darker green on hover */
+}
+
+/* You'll need to adjust the background-position for each button based on where the icon is located in your image */
+#refreshButton {
+  background-position: -147px -76px;
+}
+
+#prevButton {
+    background-position: -194px -276px;
+}
+
+#nextButton {
+    background-position: -54px -276px;
+}
+
+#randButton {
+    background-position: -192px -76px;
+}
+
+#pauseButton {
+    background-position: -147px -277px;
+}
+
+.button-icon {
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  background-size: 256px 256px;
+  background-image: url('../../static/image/controls.jpg');
+  filter: invert(83%); /* Invert colors */
+  cursor: pointer;
+}
+
+.button-icon:hover {
+  filter: invert(20%);
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: #222224;
+    padding: 3px;
+    margin-top: 10px;
+}
+
+.progress-bar {
+    height: 20px;
+    background-color: #48a;
+    width: 0%;
+    text-align: center;
+    color: white;
+}
+
+.dashboard {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.left-panel, .right-panel {
+    background-color: #424242;
+    margin-bottom: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.left-panel {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.right-panel {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0px;
+}
+
+.graph {
+    width: 45%;
+    padding: 0px;
+}
+
+.graph-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    margin-top: 0px;
+}
+
+.controls-container {
+    flex: 1; /* Takes up 1 part of the available space */
+    display: flex;
+}
+
+#evalGraph {
+    width: 100%;
+    margin-top: 20px;
+}
+
+#lossGraph {
+    width: 100%;
+    margin-top: 20px;
+}
+
+#audioPlayer {
+    flex: 1;
+    width: 50%;
+    height: 40px;
+    margin-top: 10px;
+    border-radius: 12px;
+}
+
+.card {
+  background: #333;
+  color: #888;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  width: 100%;
+  margin: 10px auto;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  display: flex;
+  align-items: right;
+  margin-bottom: 10px;
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+.edit-button {
+  padding: 8px 16px;
+  background: #007bff; /* Primary button color */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.card-content {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 10px;
+  row-gap: 10px;
+  flex-grow: 1;
+  min-width: 100px;
+}
+
+#modelDetails {
+    display: flex;
+}
+
+.label {
+  color: #aaa;
+  grid-column: 1 / 2;
+  font-weight: bold;
+  text-align: right;
+}
+
+.value {
+  text-align: left;
+}
+
+.conv-layers-table {
+    width: 100%; /* Adjust as necessary */
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.conv-layers-table th, .conv-layers-table td {
+    border: 1px solid #222;
+    padding: 5px 10px;
+    text-align: left;
+}
+
+.conv-layers-table th {
+    background-color: #444; /* Dark background for the header */
+    color: #aaa; /* Light text for readability */
+}
+
+.conv-layers-table td {
+    color: #aaa; /* Light text for readability */
+}
+
+tbody tr:nth-child(even) {
+    background-color: #383838; /* Zebra-striping for rows */
+}
+
+/* Responsive adjustments if needed */
+@media (max-width: 768px) {
+    .dashboard {
+        flex-direction: column;
+    }
+
+    .left-panel, .right-panel {
+        margin-right: 0;
+        flex: none; /* Allow the panels to take natural size */
+    }
+
+    .graph-container {
+        flex-direction: column;
+    }
+
+    #lossGraph, #evalGraph {
+        margin-left: 0;
+        margin-bottom: 10px;
+        width: 100%; /* Full width on smaller screens */
+    }
+}

@@ -1,171 +1,200 @@
-import random
+import json
+import os
 
-import plotly.graph_objects as go
+import plotly
 import torch
-import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from plotly.subplots import make_subplots
+from flask import Flask, jsonify, render_template, Response, stream_with_context, send_from_directory, request
 from torch.utils.data import DataLoader
 
+import trainer
 from cnn import ConvNetModel
-from dataset import GoodSoundsDataset
+from dataset import GoodSounds, FSDKaggle2019
+from events import train_lifecycle_event, refresh_visuals_event, refresh_config
 
-width, height = 256, 128
-truncate_len = 65536
-batch_size = 128
-epochs = 10
+# config
+width, height = 512, 128
+truncate_len = 128000
+sample_rate = 32000
+batch_size = 2048
+epochs = 500
+max_subset_samples = 1000
+lr = 2e-4
+train_set, eval_set = None, None
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+from figures import create_predictions_figure
+
+state = dict(train_set=None, eval_set=None, model=None, optimizer=None, paused=False)
+app = Flask(__name__, template_folder='templates')
+
+@app.route('/')
+def index():
+    return render_template('index.html')  # The HTML template should have the buttons and audio element.
+
+@app.route('/initialize')
+def initialize():
+    def init_generator():
+        import sys
+        print(sys.argv)
+
+        # first parameter is root directory of dataset
+        root_path = sys.argv[1]
+
+        # second parameter is name of dataset
+        ds_class_name = sys.argv[2]
+
+        if ds_class_name == "GoodSounds":
+            dataset = GoodSounds(root_path, sample_rate, truncate_len, width, height)
+            train_amt = round(0.8 * len(dataset))
+            train_set, eval_set = torch.utils.data.random_split(dataset, [train_amt, len(dataset) - train_amt])
+
+        elif ds_class_name == "FSDKaggle2019":
+            data_per_wav = 1
+            train_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/train_noisy_post_competition.csv',
+                                      root_path + '/FSDKaggle2019.audio_train_noisy',
+                                      sample_rate, truncate_len, data_per_wav, width, height)
+            # train_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/train_curated_post_competition.csv',
+            #                           root_path + '/FSDKaggle2019.audio_train_curated',
+            #                           sample_rate, truncate_len, data_per_wav, width, height)
+            eval_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/test_post_competition.csv',
+                                     root_path + '/FSDKaggle2019.audio_test',
+                                     sample_rate, truncate_len, data_per_wav, width, height)
+            state["audio_path"] = root_path + '/FSDKaggle2019.audio_test'
+        else:
+            raise ModuleNotFoundError
+
+        model = ConvNetModel(width, height, len(eval_set.categories)).to(device)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+        print(optimizer.param_groups[0]['lr'])
+        state["model"] = model
+        state["optimizer"] = optimizer
+        state["train_set"] = train_set
+        state["eval_set"] = eval_set
+
+        config_hash, config, _ = trainer.get_config_maybe_creating_folder(model, train_set, batch_size, ds_class_name)
+
+        yield refresh_config(config_hash)
+        yield refresh_visuals_event()
+        yield from eval_set.preload(state)
+
+    return Response(stream_with_context(init_generator()), mimetype='text/event-stream')
 
 
-def save_checkpoint(state, filename):
-    torch.save(state, filename)
+@app.route('/train')
+def train():
+    def train_generator():
+
+        import sys
+        # second parameter is name of dataset
+        ds_class_name = sys.argv[2]
+
+        yield train_lifecycle_event("Training has (re)started")
+        yield from trainer.train(
+            max_subset_samples=max_subset_samples,
+            device=device,
+            epochs=epochs,
+            batch_size=batch_size,
+            ds_class_name=ds_class_name,
+            state=state)
+        yield train_lifecycle_event("Training has finished / paused")
+
+    return Response(stream_with_context(train_generator()), mimetype='text/event-stream')
 
 
-def load_checkpoint(filename):
-    checkpoint = torch.load(filename)
-    model.load_state_dict(checkpoint['state_dict'])
-    optim.load_state_dict(checkpoint['optimizer'])
-    return checkpoint['epoch'], checkpoint['step']
+@app.route('/train/pause', methods=['POST'])
+def pause_training():
+    state["paused"] = True
+    return Response()
 
 
-if __name__ == "__main__":
-    import sys
-    print(sys.argv)
-    root_path = sys.argv[1]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+@app.route('/checkpoints', methods=['GET'])
+def list_checkpoints():
+    """
+    :return: a list of *.pth.tar checkpoint file names
+    """
+    checkpoint_dir = "checkpoints/FSDKaggle2019"
 
-    dataset = GoodSoundsDataset(root_path, truncate_len, width, height)
-    model = ConvNetModel(width, height, len(dataset.categories)).to(device)
-    optim = optim.Adam(model.parameters())
+    f = []
+    for (dirpath, dirnames, filenames) in os.walk(checkpoint_dir):
+        print(dirpath, dirnames)
+        f.extend(filenames)
 
-    # when our loss curve plateaus, there's almost always more room for
-    # improvement by reducing the learning rate.
-    scheduler = ReduceLROnPlateau(optim, mode='min', factor=0.5, patience=5, verbose=True)
+    return jsonify(f)
 
-    loss_fn = nn.CrossEntropyLoss().to(device)
-    torch.manual_seed(0)
 
-    train_set, eval_set = torch.utils.data.random_split(dataset, [15308, 1000])
+@app.route('/checkpoints', methods=['POST'])
+def save_checkpoints():
+    """
+    :return: a list of *.pth.tar checkpoint file names
+    """
+    checkpoint_dir = "checkpoints/FSDKaggle2019"
+    # trainer.save_checkpoint()
+    return Response()
 
-    train_dl = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-    eval_dl = DataLoader(eval_set, batch_size=batch_size, shuffle=True)
-    # writer = SummaryWriter()
 
-    start_epoch = 0
-    count = 0
-    best_eval_loss = 1e9
-    # start_epoch, count = load_checkpoint('checkpoints/epoch_249_step_31748_loss_0.00013662.pth.tar')
+@app.route('/checkpoints/load/<checkpoint>', methods=['POST'])
+def load_checkpoint(checkpoint):
+    checkpoint_path = f"checkpoints/FSDKaggle2019/{checkpoint}"
+    if not os.path.isfile(checkpoint_path):
+        return jsonify({"error": "Checkpoint file not found."}), 404
 
-    for epoch in range(start_epoch, epochs):
-        # puts the dropout and batchnorm components into correct mode
-        model.train()
-
-        for map_batch in train_dl:
-            # gradients in the optimizer are still around from the last batch - zero them
-            optim.zero_grad()
-
-            inputs = map_batch['spectrogram'].to(device)
-            labels = map_batch['index'].to(device)
-
-            # calls model.forward(inputs) - predicts the outputs
-            outputs = model(inputs)
-
-            # calculate the loss - how well our model did in matching the labels
-            loss = loss_fn(outputs, labels)
-
-            # calculates the gradients with respect to our loss function, with backpropagation.
-            # Pytorch tensors have a 'hidden' gradient attribute that connects with any
-            # operation it's been used in, so calling backward does backpropagation through
-            # that graph of tensors and operations
-            loss.backward()
-
-            # nudge the model toward better performance according to the loss gradients
-            optim.step()
-
-            count += 1
-
-            if count % 10 == 0:
-                print(f"Epoch: {epoch}, step {count}, loss: {loss.item():3.3}")
-
-        print(f"Evaluating epoch {epoch}...")
-
-        model.eval()
-        accum_eval_loss = 0.0
-        accum_accuracy = 0.0
-
-        # turning off the gradient calculations speeds up inference
-        with torch.no_grad():
-            for map_batch in eval_dl:
-                inputs = map_batch['spectrogram'].to(device)
-                labels = map_batch['index'].to(device)
-                outputs = model(inputs)
-                pred_idcs = outputs.argmax(dim=1)
-
-                # calculate categorization accuracy
-                _, predicted = torch.max(outputs.data, 1)
-                correct = (predicted == labels).sum().item()
-                accum_accuracy += correct / labels.size(0)
-
-                loss = loss_fn(outputs, labels)
-                accum_eval_loss += loss.item()
-
-        avg_eval_loss = accum_eval_loss / len(eval_dl)
-        avg_eval_acc = accum_accuracy / len(eval_dl)
-        scheduler.step(avg_eval_loss)
-
-        print(f"Eval loss: {avg_eval_loss:.6}, eval accuracy: {100*avg_eval_acc:3.2f}%")
-
-        # checkpoint if it's an improvement
-        if avg_eval_loss < best_eval_loss:
-            best_eval_loss = avg_eval_loss
-            filename = f"checkpoints/t65k/epoch_{epoch}_step_{count}_loss_{avg_eval_loss:.6f}.pth.tar"
-            print(f"Saving checkpoint {filename}...")
-
-            save_checkpoint({
-                'epoch': epoch,
-                'step': count,
-                'state_dict': model.state_dict(),
-                'optimizer': optim.state_dict(),
-            }, filename=filename)
-
-        if avg_eval_acc > 0.995:
-            print("Accuracy threshold reached, stopping early")
-            break
-
-    random_ind = random.sample(range(len(eval_set)),12)
-    random_samples = [eval_set[i] for i in random_ind]
-
-    fig = make_subplots(
-        rows=3,
-        cols=4,
-        subplot_titles=[f"Sample {i+1}" for i in range(12)],
-        horizontal_spacing=0.015,
-        vertical_spacing=0.05
+    start_epoch, count = trainer.load_checkpoint(
+        checkpoint_path,
+        state["model"],
+        state["optimizer"],
+        state["scheduler"]
     )
+    state["start_epoch"] = start_epoch
+    state["step"] = count
 
-    for i, sample in enumerate(random_samples):
-        data, true_label = (sample['spectrogram'], sample['metadata']['label'])
+    return jsonify({"message": "Checkpoint loaded successfully.", "start_epoch": start_epoch, "step": count})
 
-        # Generate prediction and calculate loss
-        model.eval()
 
-        with torch.no_grad():
-            # we 'unsqueeze' here to simulate having a batch size of 1, as
-            # the model expects *some* batch dimension
-            input = sample['spectrogram'].unsqueeze(0).to(device)
-            label = torch.tensor(sample['index']).unsqueeze(0).to(device)
+@app.route('/get_model_config', methods=['GET'])
+def get_model_config():
+    print('Getting model config')
+    folder = request.args.get('folder')
+    config_path = os.path.join('checkpoints/FSDKaggle2019', folder, 'config.json')
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            config = json.load(f)
+        checkpoints = [file for file in os.listdir(os.path.join('checkpoints/FSDKaggle2019', folder))
+                       if file.endswith('.pth.tar')]
+        return jsonify({'config': config, 'checkpoints': checkpoints})
+    else:
+        return jsonify({'error': 'Folder not found'}), 404
 
-            output = model(input)
-            # return the index of the maximum value of the output
-            pred_idx = output.argmax(dim=1)
-            pred_label = dataset.categories[pred_idx.item()]
 
-        # Add subplot
-        row, col = (i // 4) + 1, (i % 4) + 1
-        fig.add_trace(go.Heatmap(z=data.cpu().squeeze(0).numpy(), colorscale='Viridis'), row=row, col=col)
-        fig.layout.annotations[i].update(text=f'Pred: {pred_label}, Label: {true_label}')
+@app.route('/list_model_config_folders', methods=['GET'])
+def list_model_config_folders():
+    checkpoint_dir = "checkpoints/FSDKaggle2019"
 
-    fig.update_layout(
-        margin=dict(l=10, r=10, t=30, b=10)
-    )
-    fig.show()
+    f = []
+    for (dirpath, dirnames, filenames) in os.walk(checkpoint_dir):
+        f.extend(dirnames)
+        break
+    f.sort()
+    return jsonify(f)
+
+
+@app.route('/evaluate_sample/<index>', methods=['POST'])
+def evaluate_sample(index):
+    print("Generating figure")
+    if state["model"] is None:
+        print("Not initialized...")
+        return jsonify({'figure': '', 'audio': ''})
+    else:
+        fig, audio_path = create_predictions_figure(state, int(index), device)
+        graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+        return jsonify({'figure': graph_json, 'audio': audio_path})
+
+
+@app.route('/audio/<path:filename>')
+def serve_audio(filename):
+    audio_directory = state["audio_path"]
+    return send_from_directory(audio_directory, filename)
+
+app.run(debug=True, threaded=True)
