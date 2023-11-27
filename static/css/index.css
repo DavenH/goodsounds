@@ -56,12 +56,12 @@ button:hover {
   height: 50px;
   background-size: 256px 256px;
   background-image: url('../../static/image/controls.jpg');
-  filter: invert(70%); /* Invert colors */
+  filter: invert(83%); /* Invert colors */
   cursor: pointer;
 }
 
 .button-icon:hover {
-  filter: invert(80%);
+  filter: invert(20%);
 }
 
 .progress-bar-container {
@@ -76,7 +76,7 @@ button:hover {
     background-color: #48a;
     width: 0%;
     text-align: center;
-    color: black;
+    color: white;
 }
 
 .dashboard {
@@ -87,10 +87,8 @@ button:hover {
 
 .left-panel, .right-panel {
     background-color: #424242;
-    border: 1px solid #111;
     margin-bottom: 10px;
     padding: 10px;
-    border-radius: 5px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -105,17 +103,19 @@ button:hover {
     flex: 2;
     display: flex;
     flex-direction: column;
+    margin-top: 0px;
 }
 
 .graph {
     width: 45%;
-    padding: 10px;
+    padding: 0px;
 }
 
 .graph-container {
     display: flex;
     justify-content: space-between;
     margin-bottom: 10px;
+    margin-top: 0px;
 }
 
 .controls-container {
@@ -147,7 +147,7 @@ button:hover {
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   width: 100%;
-  margin: 20px auto;
+  margin: 10px auto;
   padding: 20px;
   box-sizing: border-box;
   display: flex;
@@ -160,7 +160,7 @@ button:hover {
   margin-bottom: 10px;
 }
 
-.card-header h2 {
+.card-header h3 {
   margin: 0;
 }
 
@@ -179,7 +179,7 @@ button:hover {
   column-gap: 10px;
   row-gap: 10px;
   flex-grow: 1;
-  min-width: 200px;
+  min-width: 100px;
 }
 
 #modelDetails {
@@ -210,17 +210,16 @@ button:hover {
 }
 
 .conv-layers-table th {
-    background-color: #555; /* Dark background for the header */
-    color: #fff; /* Light text for readability */
+    background-color: #444; /* Dark background for the header */
+    color: #aaa; /* Light text for readability */
 }
 
 .conv-layers-table td {
-    background-color: #666; /* Slightly lighter background for cells */
-    color: #fff; /* Light text for readability */
+    color: #aaa; /* Light text for readability */
 }
 
-.conv-layers-table tbody tr:nth-child(odd) {
-    background-color: #888; /* Zebra-striping for rows */
+tbody tr:nth-child(even) {
+    background-color: #383838; /* Zebra-striping for rows */
 }
 
 /* Responsive adjustments if needed */

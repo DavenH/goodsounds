@@ -11,7 +11,6 @@
 <body>
 <div class="dashboard">
     <div class="left-panel">
-        <p id="trainStatus"></p>
         <p id="evalStatus"></p>
         <p id="trainingProgressInfo"></p>
         <div class="progress-bar-container">
@@ -25,19 +24,22 @@
         </div>
 
         <div class="buttons">
-            <button id="saveButton" onclick="saveCheckpoint()">Save Model</button>
-            <button id="loadButton" onclick="loadCheckpoint()">Load Model</button>
             <button id="trainButton" onclick="startTraining()">Train</button>
             <button id="pauseButton" onclick="pauseTraining()">Pause</button>
         </div>
-        <div class="dropdowns">
-            <select id="modelConfigDropdown" onchange="modelConfigSelected(this)">
-                <!-- Model configuration folders will be populated here -->
-            </select>
+        <div class="card">
+            <div class="card-header">
+                <h3>Checkpoints</h3>
+            </div>
+            <div class="dropdowns">
+                <select id="modelConfigDropdown" onchange="modelConfigSelected(this)">
+                    <!-- Model configuration folders will be populated here -->
+                </select>
 
-            <select id="checkpointDropdown">
-                <!-- Checkpoints will be populated here based on the selected model configuration -->
-            </select>
+                <select id="checkpointDropdown">
+                    <!-- Checkpoints will be populated here based on the selected model configuration -->
+                </select>
+            </div>
         </div>
         <div class="card">
             <div id="modelDetails"></div>

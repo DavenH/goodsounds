@@ -104,19 +104,25 @@ function populateModelDetailsCard(config) {
     // Start with common model details
     var commonDetailsHtml = `
         <div class="card-content">
-            <h3>Model</h3>
+            <div class="card-header">
+                <h3>Model</h3>
+            </div>
             <div class="label">Width</div><div class="value">${config.model.width}</div>
             <div class="label">Height</div><div class="value">${config.model.height}</div>
         </div>
         <div class="card-content">
-            <h3>Dataset</h3>
+            <div class="card-header">
+                <h3>Dataset</h3>
+            </div>
             <div class="label">Sample Rate</div><div class="value">${config.dataset.sample_rate}</div>
             <div class="label">Trunc len</div><div class="value">${config.dataset.trunc_len}</div>
             <div class="label"># FFT</div><div class="value">${config.dataset.n_fft}</div>
             <div class="label"># Samples</div><div class="value">${config.dataset.size}</div>
         </div>
         <div class="card-content">
-            <h3>Training</h3>
+            <div class="card-header">
+                <h3>Training</h3>
+            </div>
             <div class="label">Dropout</div><div class="value">${config.model.dropout}</div>
             <div class="label">Batch Size</div><div class="value">${config.batch_size}</div>
         </div>
@@ -128,7 +134,9 @@ function populateModelDetailsCard(config) {
     // Now create the table for conv layer details
     var tableHtml = `
         <div>
-            <h3>Conv Layers</h3>
+            <div class="card-header">
+                <h3>Conv Layers</h3>
+            </div>
             <table class="conv-layers-table">
                 <thead>
                     <tr>
@@ -230,7 +238,7 @@ function startTraining() {
 
         trainSource.addEventListener('train_lifecycle', function(event) {
             var newData = event.data;
-            document.getElementById("trainStatus").innerHTML = newData;
+            document.getElementById("trainingProgressInfo").innerHTML = newData;
         }, false);
 
         trainSource.addEventListener('train_progress', trainingListener, false);
