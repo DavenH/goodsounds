@@ -23,7 +23,6 @@ class ConvNetModel(nn.Module):
             dict(maps=64, kernel_size=3, stride=2, pool=True),
             dict(maps=128, kernel_size=3, stride=2, pool=False),
             dict(maps=512, kernel_size=3, stride=1, pool=True),
-            dict(maps=1024, kernel_size=3, stride=1, pool=False),
             dict(maps=1024, kernel_size=3, stride=1, pool=True)
         ]
 

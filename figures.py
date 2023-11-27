@@ -49,7 +49,7 @@ def create_predictions_figure(
         fig.add_trace(go.Bar(y=top_categories, x=topk_values.numpy(), orientation='h', showlegend=False), col=1, row=1)
 
         fig.layout.annotations[0].update(text=f'Predictions', ax=0)
-        fig.add_trace(go.Heatmap(z=data.cpu().squeeze(0).numpy(), colorscale='Viridis', legendwidth=10), col=2, row=1)
+        fig.add_trace(go.Heatmap(z=data.cpu().squeeze(0).numpy(), colorscale='Viridis'), col=2, row=1)
 
         fig.layout.annotations[1].update(text=f'Label: {true_label}', ax=0)
 

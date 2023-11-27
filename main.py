@@ -16,7 +16,7 @@ from events import train_lifecycle_event, refresh_visuals_event, refresh_config
 width, height = 512, 128
 truncate_len = 128000
 sample_rate = 32000
-batch_size = 2048
+batch_size = 256
 epochs = 500
 max_subset_samples = 1000
 lr = 2e-4
@@ -52,12 +52,12 @@ def initialize():
 
         elif ds_class_name == "FSDKaggle2019":
             data_per_wav = 1
-            train_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/train_noisy_post_competition.csv',
-                                      root_path + '/FSDKaggle2019.audio_train_noisy',
-                                      sample_rate, truncate_len, data_per_wav, width, height)
-            # train_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/train_curated_post_competition.csv',
-            #                           root_path + '/FSDKaggle2019.audio_train_curated',
+            # train_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/train_noisy_post_competition.csv',
+            #                           root_path + '/FSDKaggle2019.audio_train_noisy',
             #                           sample_rate, truncate_len, data_per_wav, width, height)
+            train_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/train_curated_post_competition.csv',
+                                      root_path + '/FSDKaggle2019.audio_train_curated',
+                                      sample_rate, truncate_len, data_per_wav, width, height)
             eval_set = FSDKaggle2019(root_path + '/FSDKaggle2019.meta/test_post_competition.csv',
                                      root_path + '/FSDKaggle2019.audio_test',
                                      sample_rate, truncate_len, data_per_wav, width, height)
