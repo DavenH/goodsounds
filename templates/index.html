@@ -11,21 +11,23 @@
 <body>
 <div class="dashboard">
     <div class="left-panel">
-        <p id="evalStatus"></p>
-        <p id="trainingProgressInfo"></p>
-        <div class="progress-bar-container">
-            <div class="progress-bar" id="trainingProgress">0%</div>
-        </div>
+        <div class="card">
+            <p id="evalStatus"></p>
+            <p id="trainingProgressInfo"></p>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="trainingProgress">0%</div>
+            </div>
 
-        <!-- Controls Section -->
-        <p id="loadProgressInfo"></p>
-        <div class="progress-bar-container">
-            <div class="progress-bar" id="loadProgress">0%</div>
-        </div>
+            <!-- Controls Section -->
+            <p id="loadProgressInfo"></p>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="loadProgress">0%</div>
+            </div>
 
-        <div class="buttons">
-            <button id="trainButton" onclick="startTraining()">Train</button>
-            <button id="pauseButton" onclick="pauseTraining()">Pause</button>
+            <div class="buttons">
+                <button id="trainButton" onclick="startTraining()">Train</button>
+                <button id="pauseButton" onclick="pauseTraining()">Pause</button>
+            </div>
         </div>
         <div class="card">
             <div class="card-header">
