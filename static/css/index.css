@@ -1,5 +1,5 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: "Open Sans", Verdana, Arial, sans-serif;
     margin: 0;
     padding: 0;
     display: flex;
@@ -10,50 +10,15 @@ body {
     color: #aaa; /* dark text */
 }
 
-.buttons {
-  margin-top: 10px;
-  margin-bottom: 20px;
-}
-
-button {
-    padding: 10px 20px;
-    cursor: pointer;
-    background-color: #48a; /* Green background */
-    color: #111; /* White text */
-    border: none;
-    border-radius: 5px; /* Rounded corners */
-    transition: background-color 0.1s; /* Transition for hover effect */
-}
-
-button:hover {
-    background-color: #59b; /* Darker green on hover */
-}
-
-/* You'll need to adjust the background-position for each button based on where the icon is located in your image */
-#refreshButton {
-  background-position: -147px -76px;
-}
-
-#prevButton {
-    background-position: -194px -276px;
-}
-
-#nextButton {
-    background-position: -54px -276px;
-}
-
-#randButton {
-    background-position: -192px -76px;
-}
-
-#pauseButton {
-    background-position: -147px -277px;
+#audioPlayer {
+    margin-right: 20px;
+    height: 40px;
+    border-radius: 6px;
 }
 
 .button-icon {
-  display: inline-block;
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   background-size: 256px 256px;
   background-image: url('../../static/image/controls.jpg');
   filter: invert(83%); /* Invert colors */
@@ -62,6 +27,44 @@ button:hover {
 
 .button-icon:hover {
   filter: invert(20%);
+}
+
+button {
+    font-size: 14px;
+    font-weight: bold;
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #48a;
+    color: #111;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.buttons {
+  margin-top: 20px;
+}
+
+
+button:hover {
+    background-color: #59b;
+}
+
+/* You'll need to adjust the background-position for each button based on where the icon is located in your image */
+#refreshButton {
+  background-position: -152px -79px;
+}
+#prevButton {
+    background-position: -198px -281px;
+}
+#nextButton {
+    background-position: -59px -281px;
+}
+#randButton {
+    background-position: -197px -79px;
+}
+#pauseButton {
+    background-position: -151px -277px;
 }
 
 .progress-bar-container {
@@ -118,8 +121,7 @@ button:hover {
     margin-top: 0px;
 }
 
-.controls-container {
-    flex: 1; /* Takes up 1 part of the available space */
+#controls-container {
     display: flex;
 }
 
@@ -130,60 +132,45 @@ button:hover {
 
 #lossGraph {
     width: 100%;
-    margin-top: 20px;
-}
-
-#audioPlayer {
-    flex: 1;
-    width: 50%;
-    height: 40px;
     margin-top: 10px;
-    border-radius: 12px;
 }
 
 .card {
   background: #333;
   color: #888;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   width: 100%;
   margin: 10px auto;
   padding: 20px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  font-size: 14px;
 }
 
 .card-header {
   display: flex;
-  align-items: right;
   margin-bottom: 10px;
+    color: #ccc;
 }
 
 .card-header h3 {
-  margin: 0;
-}
-
-.edit-button {
-  padding: 8px 16px;
-  background: #007bff; /* Primary button color */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+    margin: 0;
 }
 
 .card-content {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   column-gap: 10px;
-  row-gap: 10px;
+  row-gap: 5px;
   flex-grow: 1;
-  min-width: 100px;
+  min-width: 80px;
 }
 
 #modelDetails {
     display: flex;
+    justify-content: right;
 }
 
 .label {

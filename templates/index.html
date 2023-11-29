@@ -54,23 +54,24 @@
         <div class="graph-container">
             <div id="lossGraph"></div>
         </div>
-        <div class="graph-container">
-            <div id="evalGraph"></div>
-        </div>
         <div id="controls-container">
-            <div class="buttons">
+            <div id="audioPlayerDiv">
+                <audio id="audioPlayer" controls>
+                    <source src="initial_audio.wav" type="audio/wav">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+            <div>
                 <button id="prevButton" class="button-icon" onclick="evaluatePrev()"></button>
                 <button id="nextButton" class="button-icon" onclick="evaluateNext()"></button>
                 <button id="refreshButton" class="button-icon" onclick="evaluateSame()"></button>
                 <button id="randButton" class="button-icon" onclick="evaluateRandom()"></button>
             </div>
-            <audio id="audioPlayer" controls>
-                <source src="initial_audio.wav" type="audio/wav">
-                Your browser does not support the audio element.
-            </audio>
-
         </div>
 
+        <div class="graph-container">
+            <div id="evalGraph"></div>
+        </div>
     </div>
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
