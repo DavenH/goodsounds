@@ -12,7 +12,11 @@ class ConvNetModel(nn.Module):
         pool_h = 2
         dropout_rate = 0.1
 
+        self.pool = nn.MaxPool2d((pool_w, pool_h))
+        self.dropout = nn.Dropout(dropout_rate)
         self.conv = []
+        self.linear = []
+
         in_channels = 1
         # starting parameter size
         w, h = width, height
@@ -24,6 +28,11 @@ class ConvNetModel(nn.Module):
             dict(maps=128, kernel_size=3, stride=2, pool=False),
             dict(maps=512, kernel_size=3, stride=1, pool=True),
             dict(maps=1024, kernel_size=3, stride=1, pool=True)
+        ]
+
+        linear_layers = [
+            dict(out_size=n_categories, relu=True, dropout=True),
+            dict(out_size=n_categories, relu=False, dropout=False)
         ]
 
         print(f"Shape:\t\t\t1 x {w} x {h},\t{w * h}")
@@ -60,35 +69,34 @@ class ConvNetModel(nn.Module):
 
             n_total_param += n_parameters
 
-
         final_size = conv_layers[-1]["maps"] * w * h
 
-        self.pool = nn.MaxPool2d((pool_w, pool_h))
-        self.dropout = nn.Dropout(dropout_rate)
+        in_channels = final_size
+        for idx, layer in enumerate(linear_layers):
+            out_size = layer["out_size"]
+            linear_config = dict(
+                layer=nn.Linear(in_features=in_channels, out_features=out_size),
+                relu=layer["relu"],
+                dropout=layer["dropout"]
+            )
+            self.linear.append(linear_config)
 
-        # average between to the sizes in log-space
-        intermediate_size = 80 # 2 ** round(0.5 * (math.log2(final_size) + math.log2(n_categories)))
+            print(f"After linear {idx+1}:\t{in_channels} x {out_size}\t{in_channels * out_size}")
+            modules[f"fc{idx}"] = linear_config["layer"]
+            n_total_param += in_channels * out_size
+            in_channels = out_size
 
-        self.fc1 = nn.Linear(final_size, intermediate_size)
-        self.fc2 = nn.Linear(intermediate_size, n_categories)
 
-        print(f"After linear 1:\t{final_size} x {intermediate_size}\t{final_size * intermediate_size}")
-        n_total_param += final_size * intermediate_size
-
-        print(f"After linear 2:\t{intermediate_size} x {n_categories}\t{intermediate_size * n_categories}")
-
-        n_total_param += final_size * n_categories
         print(f"Total Parameters:\t{n_total_param}")
 
         self.config = dict(
             conv_layers=conv_layers,
+            linear_layers=linear_layers,
             dropout=dropout_rate,
             width=width,
             height=height,
             pool_w=pool_w,
             pool_h=pool_h,
-            fc1_in=final_size,
-            fc1_out=n_categories
         )
 
         # quick test to be sure it all works before waiting for dataset load
@@ -106,9 +114,13 @@ class ConvNetModel(nn.Module):
 
         # flatten everything except batch dimension
         x = x.view(x.shape[0], -1)
-        x = fn.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
+
+        for layer in self.linear:
+            x = layer["layer"](x)
+            if layer["relu"]:
+                x = fn.relu(x)
+            if layer["dropout"]:
+                x = self.dropout(x)
         return x
 
 

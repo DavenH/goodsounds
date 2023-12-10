@@ -1,21 +1,23 @@
+import json
+import os.path
+import hashlib
+
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
-import json
-import os.path
-from base64 import b64encode
-
+from cnn import ConvNetModel
 from dataset import BaseAudioDataset
-from subset_sampler import SubsetSampler
 from events import train_progress_event, checkpoint_event, eval_progress_event, refresh_visuals_event
+from subset_sampler import SubsetSampler
 
 
 def save_checkpoint(
-        model: torch.nn.Module,
+        model: ConvNetModel,
         train_set: BaseAudioDataset,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
+        state: dict,
         batch_size: int,
         ds_class_name: str,
         epoch: int,
@@ -31,8 +33,14 @@ def save_checkpoint(
     }
 
     config_hash, config, folder = get_config_maybe_creating_folder(model, train_set, batch_size, ds_class_name)
+    config["training_runs"] = state["training_runs"][config_hash]
 
-    filename = f"{folder}/epoch_{epoch}_step_{step}_loss_{avg_eval_loss:.6f}.pth.tar"
+    filename = f"{folder}/epoch_{epoch:03}_step_{step}_loss_{avg_eval_loss:.6f}.pth.tar"
+    print(f"Saving checkpoint {filename}")
+
+    with open(f"{folder}/config.json", 'w') as f:
+        json.dump(config, f, indent=2)
+
     print(f"Saving checkpoint {filename}")
 
     yield checkpoint_event(filename, epoch, step)
@@ -41,18 +49,18 @@ def save_checkpoint(
 
 
 def get_config_maybe_creating_folder(
-        model: torch.nn.Module,
+        model: ConvNetModel,
         train_set: BaseAudioDataset,
         batch_size: int,
         ds_class_name: str):
-    config = dict(
+    config_no_training_runs = dict(
         model=model.get_config(),
         dataset=train_set.get_config(),
         batch_size=batch_size
     )
 
-    hash_str = f"{hash(json.dumps(config, sort_keys=True))}"
-    config_hash = str(b64encode(hash_str.encode('utf-8')))[4:10]
+    hash_str = f"{hashlib.md5(json.dumps(config_no_training_runs, sort_keys=True).encode('utf-8')).hexdigest()}"
+    config_hash = hash_str[4:10]
     folder = f"checkpoints/{ds_class_name}/{config_hash}"
 
     config_file_name = os.path.join(folder, f"config.json")
@@ -60,10 +68,16 @@ def get_config_maybe_creating_folder(
     if not os.path.exists(folder):
         os.mkdir(folder)
 
-    if not os.path.exists(config_file_name):
+    if os.path.exists(config_file_name):
+        with open(config_file_name, 'r') as f:
+            config = json.load(f)
+    else:
         with open(config_file_name, 'w') as f:
-            json.dump(config, f, indent=2)
+            json.dump(config_no_training_runs, f, indent=2)
+            config = config_no_training_runs
 
+    if "training_runs" not in config:
+        config["training_runs"] = []
     return config_hash, config, folder
 
 
@@ -90,13 +104,15 @@ def train(
     perf_stagnation = 0
     torch.manual_seed(0)
 
-    model: torch.nn.Module = state["model"]
+    model: ConvNetModel = state["model"]
     optimizer: torch.optim.Optimizer = state["optimizer"]
     train_set: BaseAudioDataset = state["train_set"]
     eval_set: BaseAudioDataset = state["eval_set"]
     start_epoch = state.get("start_epoch", 0)
     step = state.get("step", 0)
     state["paused"] = False
+
+    config_hash, config, _ = get_config_maybe_creating_folder(model, train_set, batch_size, ds_class_name)
 
     sampler = SubsetSampler(train_set, max_subset_samples)
     if "sampler" in state:
@@ -114,6 +130,13 @@ def train(
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
     if "scheduler" in state:
         scheduler.load_state_dict(state["scheduler"])
+
+    train_run = dict(eval=[], train=[])
+
+    if config_hash not in state["training_runs"]:
+        state["training_runs"][config_hash] = config["training_runs"]
+
+    state["training_runs"][config_hash].append(train_run)
 
     # epochs = 0
     for epoch in range(start_epoch, epochs):
@@ -145,10 +168,11 @@ def train(
             print(f"Epoch: {epoch}, step {step}, eval_loss: {avg_eval_loss:3.3}")
             # avg_eval_acc = accum_accuracy / len(eval_dl)
             scheduler.step(avg_eval_loss)
-            yield eval_progress_event(epoch, epochs, step, avg_eval_loss)
+            yield eval_progress_event(epoch, epochs, step * batch_size, avg_eval_loss)
+            train_run["eval"].append((step * batch_size, avg_eval_loss))
 
             if epoch >= 10 and epoch % 10 == 0:
-                yield from save_checkpoint(model, train_set, optimizer, scheduler, batch_size,
+                yield from save_checkpoint(model, train_set, optimizer, scheduler, state, batch_size,
                                            ds_class_name, epoch, step, avg_eval_loss)
 
             if avg_eval_loss < best_eval_loss:
@@ -186,7 +210,9 @@ def train(
 
             # if count % 10 == 0:
             print(f"Epoch: {epoch}, step {step}, loss: {loss.item():3.3}")
-            yield train_progress_event(epoch, epochs, step, loss.item())
+            yield train_progress_event(epoch, epochs, step * batch_size, loss.item())
+
+            train_run["train"].append((step * batch_size, loss.item()))
         # accum_accuracy = 0.0
 
         # # load a new random selection of training data into memory

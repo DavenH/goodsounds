@@ -18,7 +18,7 @@ truncate_len = 128000
 sample_rate = 32000
 batch_size = 256
 epochs = 500
-max_subset_samples = 1000
+max_subset_samples = 5000
 lr = 2e-4
 train_set, eval_set = None, None
 
@@ -26,7 +26,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from figures import create_predictions_figure
 
-state = dict(train_set=None, eval_set=None, model=None, optimizer=None, paused=False)
+state = dict(train_set=None, eval_set=None, model=None, optimizer=None, paused=False, training_runs=dict())
 app = Flask(__name__, template_folder='templates')
 
 @app.route('/')
@@ -124,16 +124,6 @@ def list_checkpoints():
     return jsonify(f)
 
 
-@app.route('/checkpoints', methods=['POST'])
-def save_checkpoints():
-    """
-    :return: a list of *.pth.tar checkpoint file names
-    """
-    checkpoint_dir = "checkpoints/FSDKaggle2019"
-    # trainer.save_checkpoint()
-    return Response()
-
-
 @app.route('/checkpoints/load/<checkpoint>', methods=['POST'])
 def load_checkpoint(checkpoint):
     checkpoint_path = f"checkpoints/FSDKaggle2019/{checkpoint}"
@@ -171,12 +161,22 @@ def get_model_config():
 def list_model_config_folders():
     checkpoint_dir = "checkpoints/FSDKaggle2019"
 
-    f = []
+    config_list = []
     for (dirpath, dirnames, filenames) in os.walk(checkpoint_dir):
-        f.extend(dirnames)
+        for folder in dirnames:
+            config_path = os.path.join(checkpoint_dir, folder, 'config.json')
+            if os.path.exists(config_path):
+                with open(config_path) as f:
+                    config = json.load(f)
+                checkpoints = [file for file in os.listdir(os.path.join(checkpoint_dir, folder))
+                               if file.endswith('.pth.tar')]
+                config_list.append({
+                    'hash': folder,
+                    'config': config,
+                    'checkpoints': checkpoints
+                })
         break
-    f.sort()
-    return jsonify(f)
+    return jsonify(config_list)
 
 
 @app.route('/evaluate_sample/<index>', methods=['POST'])
