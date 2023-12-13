@@ -6,7 +6,7 @@ import torch
 import torch.optim as optim
 from flask import Flask, jsonify, render_template, Response, stream_with_context, send_from_directory, request
 from torch.utils.data import DataLoader
-
+from threading import Thread, Lock
 import trainer
 from cnn import ConvNetModel
 from dataset import GoodSounds, FSDKaggle2019
@@ -26,7 +26,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from figures import create_predictions_figure
 
-state = dict(train_set=None, eval_set=None, model=None, optimizer=None, paused=False, training_runs=dict())
+state = dict(
+    train_set=None,
+    eval_set=None,
+    model=None,
+    optimizer=None,
+    paused=False,
+    training_runs=dict(),
+    mutex = Lock()
+)
 app = Flask(__name__, template_folder='templates')
 
 @app.route('/')
@@ -186,10 +194,11 @@ def evaluate_sample(index):
         print("Not initialized...")
         return jsonify({'figure': '', 'audio': ''})
     else:
-        fig, audio_path = create_predictions_figure(state, int(index), device)
+        fig, fig2, audio_path = create_predictions_figure(state, int(index), device)
         graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+        kernel_json = json.dumps(fig2, cls=plotly.utils.PlotlyJSONEncoder)
 
-        return jsonify({'figure': graph_json, 'audio': audio_path})
+        return jsonify({'spectrogram': graph_json, 'intermediates': kernel_json, 'audio': audio_path})
 
 
 @app.route('/audio/<path:filename>')

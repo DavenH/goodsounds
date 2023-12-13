@@ -1,6 +1,7 @@
+import hashlib
 import json
 import os.path
-import hashlib
+import time
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -157,12 +158,13 @@ def train(
             # turning off the gradient calculations speeds up inference
             with torch.no_grad():
                 for batch in eval_dl:
-                    inputs = batch['spectrogram'].to(device)
-                    labels = batch['label'].to(device)
-                    outputs = model(inputs)
+                    with state["mutex"]:
+                        inputs = batch['spectrogram'].to(device)
+                        labels = batch['label'].to(device)
+                        outputs = model(inputs)
 
-                    loss = loss_fn(outputs, labels)
-                    accum_eval_loss += loss.item()
+                        loss = loss_fn(outputs, labels)
+                        accum_eval_loss += loss.item()
 
             avg_eval_loss = accum_eval_loss / len(eval_dl)
             print(f"Epoch: {epoch}, step {step}, eval_loss: {avg_eval_loss:3.3}")
@@ -184,29 +186,30 @@ def train(
         model.train()
 
         for batch in train_dl:
-
             if state["paused"]:
                 break
-            # gradients in the optimizer are still from the last batch - zero them
-            optimizer.zero_grad()
 
-            inputs = batch['spectrogram'].to(device)
-            labels = batch['label'].to(device)
+            with state["mutex"]:
+                # gradients in the optimizer are still from the last batch - zero them
+                optimizer.zero_grad()
 
-            # predict our outputs with the model
-            outputs = model(inputs)
+                inputs = batch['spectrogram'].to(device)
+                labels = batch['label'].to(device)
 
-            # calculate the loss (error) - how well our model did in matching the labels
-            loss = loss_fn(outputs, labels)
+                # predict our outputs with the model
+                outputs = model(inputs)
 
-            # calculate the loss surface -- if you could tweak every parameter in the model slightly, for each one,
-            # which way makes the loss go down.
-            loss.backward()
+                # calculate the loss (error) - how well our model did in matching the labels
+                loss = loss_fn(outputs, labels)
 
-            # take a small step in that direction that makes the loss go down
-            optimizer.step()
+                # calculate the loss surface -- if you could tweak every parameter in the model slightly, for each one,
+                # which way makes the loss go down.
+                loss.backward()
 
-            step += 1
+                # take a small step in that direction that makes the loss go down
+                optimizer.step()
+
+                step += 1
 
             # if count % 10 == 0:
             print(f"Epoch: {epoch}, step {step}, loss: {loss.item():3.3}")
@@ -217,7 +220,6 @@ def train(
 
         # # load a new random selection of training data into memory
         # if epoch > 0 and epoch % 100 == 0:
-        #
 
         if perf_stagnation > 10:
             perf_stagnation = 0

@@ -9,11 +9,14 @@ function evaluateSampleAt(idx) {
         type: "POST",
         url: "/evaluate_sample/" + idx,
         success: function(response) {
-            var figureData = JSON.parse(response.figure);
+            var specFigure = JSON.parse(response.spectrogram);
+            var kernelData = JSON.parse(response.intermediates);
             var audioPath = response.audio;
 
             // Use Plotly to update the figure
-            Plotly.react('evalGraph', figureData.data, figureData.layout);
+            Plotly.react('evalGraph', specFigure.data, specFigure.layout);
+
+            Plotly.react('kernelGraph', kernelData.data, kernelData.layout);
 
             // Update the source of the audio player
             var audioPlayer = document.getElementById('audioPlayer');
@@ -217,15 +220,15 @@ function refreshConfigSelection(configHash) {
 
                 console.log('maxRunIdx', maxRunIdx);
                 var currentTrainIdx = maxRunIdx + 1;
-                currentTrainLabel = `${configHash} ${maxRunIdx}`;
+                currentTrainLabel = `${configHash} ${currentTrainIdx}`;
 
                 configListGlobal.push({
                     'hash': configHash,
                     'checkpoints': existing?.checkpoints || [],
-                    'trainingRun': [{
+                    'trainingRun': {
                         'train': [],
                         'eval': []
-                    }],
+                    },
                     'visible': true,
                     'showDropdown': maxRunIdx === 0,
                     'runIdx': currentTrainIdx

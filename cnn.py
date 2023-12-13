@@ -16,6 +16,7 @@ class ConvNetModel(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.conv = []
         self.linear = []
+        self.visualize_outputs = False
 
         in_channels = 1
         # starting parameter size
@@ -105,12 +106,18 @@ class ConvNetModel(nn.Module):
 
 
     def forward(self, x):
+        if self.visualize_outputs:
+            self.intermediate_outputs = []
+
         for conv_layer in self.conv:
             x = conv_layer["conv"](x)
             x = fn.relu(x)
             if conv_layer["pool"]:
                 x = self.pool(x)
             x = conv_layer["batch_norm"](x)
+
+            if self.visualize_outputs:
+                self.intermediate_outputs.append(x)
 
         # flatten everything except batch dimension
         x = x.view(x.shape[0], -1)
@@ -121,7 +128,11 @@ class ConvNetModel(nn.Module):
                 x = fn.relu(x)
             if layer["dropout"]:
                 x = self.dropout(x)
-        return x
+
+        if self.visualize_outputs:
+            return self.intermediate_outputs, x
+        else:
+            return x
 
 
     def get_config(self) -> dict:
