@@ -182,8 +182,8 @@ class FSDKaggle2019(BaseAudioDataset):
         self.label_map = {label: idx for idx, label in enumerate(self.categories)}
 
     def __len__(self):
-        return 100
-        # return len(self.annotations) * self.data_per_wav
+        # return 100
+        return len(self.annotations) * self.data_per_wav
 
     def __getitem__(self, idx):
         if idx in self.data_cache:

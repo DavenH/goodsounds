@@ -89,36 +89,38 @@ def create_predictions_figure(
             num_rows = len(intermediates)
             num_cols = 5
 
-            # Determine subplot sizes based on the spatial resolution of each layer's output
-            subplot_widths = [output.shape[-1] for output in intermediates]
-            subplot_heights = [output.shape[-2] for output in intermediates]
+            # # Determine subplot sizes based on the spatial resolution of each layer's output
+            # subplot_widths = [output.shape[-1] for output in intermediates]
+            # subplot_heights = [output.shape[-2] for output in intermediates]
+            #
+            # fig2 = make_subplots(rows=num_rows,
+            #                      cols=num_cols,
+            #                      column_widths=[1] * num_cols,
+            #                      row_heights=subplot_heights,
+            #                      horizontal_spacing=0.015,
+            #                      vertical_spacing=0.05)
+            #
+            # for row, layer_output in enumerate(intermediates, start=1):
+            #     for col in range(1, num_cols + 1):
+            #         if layer_output.shape[1] >= col:
+            #             kernel_output = layer_output[0, col - 1].detach().cpu().numpy()
+            #
+            #             fig2.add_trace(
+            #                 go.Heatmap(z=kernel_output, colorscale='Viridis', showscale=False),
+            #                 row=row, col=col,
+            #             )
+            #
+            # fig2.update_xaxes(visible=False)
+            # fig2.update_yaxes(visible=False)
+            # fig2.update_layout(
+            #     margin=dict(l=10, r=10, t=30, b=10),
+            #     height=sum(subplot_heights) * 10,
+            #     width=max(subplot_widths) * 10,
+            #     title_text="Convolution Layer Outputs",
+            #     plot_bgcolor='rgba(0.3, 0.3, 0.3, 0.0)',
+            #     paper_bgcolor='rgba(0.15, 0.15, 0.17, 1.0)',
+            #     font=dict(color='rgba(0.5, 0.5, 0.5, 1.0)')
+            # )
 
-            fig2 = make_subplots(rows=num_rows,
-                                 cols=num_cols,
-                                 column_widths=[1] * num_cols,
-                                 row_heights=subplot_heights,
-                                 horizontal_spacing=0.015,
-                                 vertical_spacing=0.05)
-
-            for row, layer_output in enumerate(intermediates, start=1):
-                for col in range(1, num_cols + 1):
-                    if layer_output.shape[1] >= col:
-                        kernel_output = layer_output[0, col - 1].detach().cpu().numpy()
-
-                        fig2.add_trace(
-                            go.Heatmap(z=kernel_output, colorscale='Viridis', showscale=False),
-                            row=row, col=col,
-                        )
-
-            fig2.update_xaxes(visible=False)
-            fig2.update_yaxes(visible=False)
-            fig2.update_layout(
-                margin=dict(l=10, r=10, t=30, b=10),
-                height=sum(subplot_heights) * 10,
-                width=max(subplot_widths) * 10,
-                title_text="Convolution Layer Outputs",
-                plot_bgcolor='rgba(0.3, 0.3, 0.3, 0.0)',
-                paper_bgcolor='rgba(0.15, 0.15, 0.17, 1.0)',
-                font=dict(color='rgba(0.5, 0.5, 0.5, 1.0)')
-            )
+        fig2 = go.Figure()
     return fig, fig2, audio_url

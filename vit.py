@@ -67,7 +67,10 @@ class MaskedVit(BaseModel):
         torch.save(self.v.state_dict(), f'{folder}/trained-vit-{best_loss:0.4f}.pt')
 
     def forward(self, x):
-        return self.v(x)
+        if self.visualize_outputs:
+            return [], self.v(x)
+        else:
+            return self.v(x)
 
     def get_config(self) -> dict:
         return self.config

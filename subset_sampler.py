@@ -1,11 +1,13 @@
 import random
+from typing import Optional, Sized
+
 from torch.utils.data import Sampler
 from dataset import BaseAudioDataset
 
 
 class SubsetSampler(Sampler):
-    def __init__(self, source: BaseAudioDataset, max_subset_samples):
-        super().__init__()
+    def __init__(self, source: BaseAudioDataset, max_subset_samples, data_source: Optional[Sized]):
+        super().__init__(data_source)
         self.source = source
         self.max_subset_samples = max_subset_samples
         size = len(self.source)

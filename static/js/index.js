@@ -10,13 +10,13 @@ function evaluateSampleAt(idx) {
         url: "/evaluate_sample/" + idx,
         success: function(response) {
             var specFigure = JSON.parse(response.spectrogram);
-            var kernelData = JSON.parse(response.intermediates);
+//            var kernelData = JSON.parse(response.intermediates);
             var audioPath = response.audio;
 
             // Use Plotly to update the figure
             Plotly.react('evalGraph', specFigure.data, specFigure.layout);
 
-            Plotly.react('kernelGraph', kernelData.data, kernelData.layout);
+//            Plotly.react('kernelGraph', kernelData.data, kernelData.layout);
 
             // Update the source of the audio player
             var audioPlayer = document.getElementById('audioPlayer');

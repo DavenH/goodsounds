@@ -116,7 +116,7 @@ def train(
 
     config_hash, config, _ = get_config_maybe_creating_folder(model, train_set, batch_size, ds_class_name)
 
-    sampler = SubsetSampler(train_set, max_subset_samples)
+    sampler = SubsetSampler(train_set, max_subset_samples, None)
     if "sampler" in state:
         sampler.load_state_dict(state["sampler"])
     else:
