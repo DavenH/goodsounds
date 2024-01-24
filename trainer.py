@@ -7,6 +7,7 @@ import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
+from base_model import BaseModel
 from cnn import ConvNetModel
 from dataset import BaseAudioDataset
 from events import train_progress_event, checkpoint_event, eval_progress_event, refresh_visuals_event
@@ -14,7 +15,7 @@ from subset_sampler import SubsetSampler
 
 
 def save_checkpoint(
-        model: ConvNetModel,
+        model: BaseModel,
         train_set: BaseAudioDataset,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
@@ -50,7 +51,7 @@ def save_checkpoint(
 
 
 def get_config_maybe_creating_folder(
-        model: ConvNetModel,
+        model: BaseModel,
         train_set: BaseAudioDataset,
         batch_size: int,
         ds_class_name: str):
@@ -105,7 +106,7 @@ def train(
     perf_stagnation = 0
     torch.manual_seed(0)
 
-    model: ConvNetModel = state["model"]
+    model: BaseModel = state["model"]
     optimizer: torch.optim.Optimizer = state["optimizer"]
     train_set: BaseAudioDataset = state["train_set"]
     eval_set: BaseAudioDataset = state["eval_set"]
@@ -139,7 +140,6 @@ def train(
 
     state["training_runs"][config_hash].append(train_run)
 
-    # epochs = 0
     for epoch in range(start_epoch, epochs):
         if state["paused"]:
             state["start_epoch"] = epoch

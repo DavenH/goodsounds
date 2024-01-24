@@ -4,9 +4,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as fn
 
-class ConvNetModel(nn.Module):
-    def __init__(self, width: int, height: int, n_categories):
-        super(ConvNetModel, self).__init__()
+from base_model import BaseModel
+
+
+class ConvNetModel(BaseModel):
+    def __init__(self, width: int, height: int, n_categories: int):
+        super(ConvNetModel, self).__init__(n_categories)
 
         pool_w = 2
         pool_h = 2
@@ -16,7 +19,6 @@ class ConvNetModel(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.conv = []
         self.linear = []
-        self.visualize_outputs = False
 
         in_channels = 1
         # starting parameter size
@@ -71,8 +73,8 @@ class ConvNetModel(nn.Module):
             n_total_param += n_parameters
 
         final_size = conv_layers[-1]["maps"] * w * h
-
         in_channels = final_size
+
         for idx, layer in enumerate(linear_layers):
             out_size = layer["out_size"]
             linear_config = dict(

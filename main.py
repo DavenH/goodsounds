@@ -1,19 +1,20 @@
 import json
 import os
+from threading import Lock
 
 import plotly
 import torch
 import torch.optim as optim
 from flask import Flask, jsonify, render_template, Response, stream_with_context, send_from_directory, request
 from torch.utils.data import DataLoader
-from threading import Thread, Lock
+
 import trainer
-from cnn import ConvNetModel
 from dataset import GoodSounds, FSDKaggle2019
 from events import train_lifecycle_event, refresh_visuals_event, refresh_config
+from vit import MaskedVit
 
 # config
-width, height = 512, 128
+width, height = 256, 256
 truncate_len = 128000
 sample_rate = 32000
 batch_size = 256
@@ -73,7 +74,12 @@ def initialize():
         else:
             raise ModuleNotFoundError
 
-        model = ConvNetModel(width, height, len(eval_set.categories)).to(device)
+        # model = ConvNetModel(width, height, len(eval_set.categories)).to(device)
+
+        pretrain_dl = DataLoader(train_set, batch_size=batch_size)
+
+        model = MaskedVit(width, 32, len(eval_set.categories), pretrain_dl).to(device)
+
         optimizer = optim.Adam(model.parameters(), lr=lr)
         print(optimizer.param_groups[0]['lr'])
         state["model"] = model
@@ -81,11 +87,12 @@ def initialize():
         state["train_set"] = train_set
         state["eval_set"] = eval_set
 
-        config_hash, config, _ = trainer.get_config_maybe_creating_folder(model, train_set, batch_size, ds_class_name)
+        config_hash, config, folder = trainer.get_config_maybe_creating_folder(model, train_set, batch_size, ds_class_name)
 
         yield refresh_config(config_hash)
         yield refresh_visuals_event()
         yield from eval_set.preload(state)
+        yield from model.pretrain(optimizer, 10, folder)
 
     return Response(stream_with_context(init_generator()), mimetype='text/event-stream')
 
