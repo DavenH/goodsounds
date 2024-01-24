@@ -12,6 +12,7 @@ import trainer
 from dataset import GoodSounds, FSDKaggle2019
 from events import train_lifecycle_event, refresh_visuals_event, refresh_config
 from vit import MaskedVit
+from figures import create_predictions_figure
 
 # config
 width, height = 256, 256
@@ -25,7 +26,6 @@ train_set, eval_set = None, None
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from figures import create_predictions_figure
 
 state = dict(
     train_set=None,
@@ -34,13 +34,15 @@ state = dict(
     optimizer=None,
     paused=False,
     training_runs=dict(),
-    mutex = Lock()
+    mutex=Lock()
 )
 app = Flask(__name__, template_folder='templates')
+
 
 @app.route('/')
 def index():
     return render_template('index.html')  # The HTML template should have the buttons and audio element.
+
 
 @app.route('/initialize')
 def initialize():
@@ -87,12 +89,13 @@ def initialize():
         state["train_set"] = train_set
         state["eval_set"] = eval_set
 
-        config_hash, config, folder = trainer.get_config_maybe_creating_folder(model, train_set, batch_size, ds_class_name)
+        config_hash, config, folder = trainer.get_config_maybe_creating_folder(model, train_set, batch_size,
+                                                                               ds_class_name)
 
         yield refresh_config(config_hash)
         yield refresh_visuals_event()
         yield from eval_set.preload(state)
-        yield from model.pretrain(optimizer, 10, folder)
+        yield from model.pretrain(device, optimizer, 10, folder)
 
     return Response(stream_with_context(init_generator()), mimetype='text/event-stream')
 
@@ -100,7 +103,6 @@ def initialize():
 @app.route('/train')
 def train():
     def train_generator():
-
         import sys
         # second parameter is name of dataset
         ds_class_name = sys.argv[2]
@@ -212,5 +214,6 @@ def evaluate_sample(index):
 def serve_audio(filename):
     audio_directory = state["audio_path"]
     return send_from_directory(audio_directory, filename)
+
 
 app.run(debug=True, threaded=True)

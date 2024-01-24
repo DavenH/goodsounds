@@ -43,6 +43,7 @@ class MaskedVit(BaseModel):
         )
 
     def pretrain(self,
+                 device: torch.device,
                  optimizer: torch.optim.Optimizer,
                  n_epochs: int,
                  folder: str
@@ -53,7 +54,7 @@ class MaskedVit(BaseModel):
             step = 0
             for batch in self.pretrain_dl:
                 optimizer.zero_grad()
-                inputs = batch['spectrogram'].to(self.device)
+                inputs = batch['spectrogram'].to(device)
                 loss = self.mae(inputs)
                 loss.backward()
                 optimizer.step()
